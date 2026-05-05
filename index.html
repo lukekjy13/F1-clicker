@@ -489,9 +489,984 @@
     }
 
     @media (max-width: 640px) {
+      .selector-overlay {
+        align-items: flex-start;
+        justify-content: stretch;
+        padding: 16px;
+      }
+
       .selector-panel {
+        width: 100%;
         padding: 20px;
         border-radius: 24px;
+        margin: 0;
+      }
+
+      .driver-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .driver-preview {
+        aspect-ratio: auto;
+        height: auto;
+        max-height: none;
+      }
+
+      .control-row {
+        justify-content: center;
+      }
+
+      .meter-top {
+        font-size: 0.82rem;
+      }
+
+    }
+  </style>
+</head>
+<body class="selecting">
+  <div class="selector-overlay" id="selectorOverlay">
+    <div class="selector-panel">
+      <p class="selector-kicker">Driver Select</p>
+      <h1 class="selector-title">Choose Your F1 Driver</h1>
+      <p class="selector-subtitle">원하는 드라이버를 선택하고 Popcat 스타일 F1 클릭 게임을 시작하세요.</p>
+      <div class="driver-grid">
+        <button class="driver-card max-card" type="button" data-driver="max">
+          <img class="driver-preview" src="./max-close.png" alt="Max Verstappen">
+          <span class="driver-name">Max Verstappen</span>
+          <span class="driver-team">Red Bull Racing</span>
+        </button>
+        <button class="driver-card charles-card" type="button" data-driver="charles">
+          <img class="driver-preview" src="./charles-close.png" alt="Charles Leclerc">
+          <span class="driver-name">Charles Leclerc</span>
+          <span class="driver-team">Scuderia Ferrari</span>
+        </button>
+        <button class="driver-card george-card" type="button" data-driver="george">
+          <img class="driver-preview" src="./george-close.png" alt="George Russell">
+          <span class="driver-name">George Russell</span>
+          <span class="driver-team">Mercedes AMG Petronas</span>
+        </button>
+        <button class="driver-card carlos-card" type="button" data-driver="carlos">
+          <img class="driver-preview" src="./carlos-close.png" alt="Carlos Sainz">
+          <span class="driver-name">Carlos Sainz</span>
+          <span class="driver-team">Williams Racing</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <main class="game">
+    <header class="hud">
+      <div class="label">F1 Click Score</div>
+      <p class="driver-title" id="driverTitle">Select Driver</p>
+      <h1 class="score" id="score">0</h1>
+      <div class="multiplier" id="multiplier">Normal Mode x1</div>
+    </header>
+
+    <section class="stage" aria-label="F1 driver click area">
+      <div class="car-glow"></div>
+      <div class="driver-wrap" id="driverWrap" role="button" tabindex="0" aria-label="클릭해서 점수를 올리세요">
+        <img class="driver-image" id="driverImage" src="./max-close.png" alt="Formula 1 driver">
+      </div>
+    </section>
+
+    <section class="controls">
+      <div class="meter-card">
+        <div class="meter-top">
+          <span>DRS Charge</span>
+          <span class="boost-timer" id="boostTimer">0%</span>
+        </div>
+        <div class="meter" aria-hidden="true">
+          <div class="meter-fill" id="meterFill"></div>
+        </div>
+        <div class="control-row">
+          <div class="mode-switch" aria-label="DRS activation mode">
+            <button class="mode-btn active" id="autoBtn" type="button">Auto</button>
+            <button class="mode-btn" id="manualBtn" type="button">Manual</button>
+          </div>
+          <button class="back-btn" id="backBtn" type="button">Change Driver</button>
+          <button class="boost-btn" id="boostBtn" type="button" disabled>Activate DRS</button>
+        </div>
+      </div>
+      <p class="hint" id="hint">화면 아무 곳이나 클릭하면 점수가 올라갑니다. DRS가 차면 자동 발동되거나 직접 눌러 발동할 수 있습니다.</p>
+    </section>
+  </main>
+
+  <script>
+    const drivers = {
+      max: {
+        name: "Max Verstappen",
+        close: "./max-close.png",
+        open: "./max-open.png",
+        hint: "막스 베르스타펜으로 출발합니다. 화면 아무 곳이나 클릭하면 점수가 올라갑니다.",
+        clickAudio: "./0504-1.mp3"
+      },
+      charles: {
+        name: "Charles Leclerc",
+        close: "./charles-close.png",
+        open: "./charles-open.png",
+        hint: "샤를 르클레르로 출발합니다. 화면 아무 곳이나 클릭하면 점수가 올라갑니다.",
+        clickAudio: "./0504-2.mp3"
+      },
+      george: {
+        name: "George Russell",
+        close: "./george-close.png",
+        open: "./george-open.png",
+        hint: "조지 러셀로 출발합니다. 화면 아무 곳이나 클릭하면 점수가 올라갑니다."
+      },
+      carlos: {
+        name: "Carlos Sainz",
+        close: "./carlos-close.png",
+        open: "./carlos-open.png",
+        hint: "카를로스 사인츠로 출발합니다. 화면 아무 곳이나 클릭하면 점수가 올라갑니다.",
+        clickAudio: "./0504-3.mp3"
+      }
+    };
+
+    const selectorOverlay = document.getElementById("selectorOverlay");
+    const driverButtons = Array.from(document.querySelectorAll("[data-driver]"));
+    const scoreEl = document.getElementById("score");
+    const driverTitle = document.getElementById("driverTitle");
+    const driverWrap = document.getElementById("driverWrap");
+    const driverImage = document.getElementById("driverImage");
+    const meterFill = document.getElementById("meterFill");
+    const boostTimer = document.getElementById("boostTimer");
+    const multiplierEl = document.getElementById("multiplier");
+    const boostBtn = document.getElementById("boostBtn");
+    const backBtn = document.getElementById("backBtn");
+    const hintEl = document.getElementById("hint");
+    const autoBtn = document.getElementById("autoBtn");
+    const manualBtn = document.getElementById("manualBtn");
+
+    const boostDuration = 3000;
+    const maxCharge = 100;
+    const chargePerClick = 7;
+    const audioContext = { current: null };
+    const driverAudio = new Audio();
+    driverAudio.preload = "auto";
+
+    let score = 0;
+    let charge = 0;
+    let boostMode = "auto";
+    let boostActive = false;
+    let boostEndsAt = 0;
+    let pressActive = false;
+    let animationFrame = null;
+    let selectedDriver = null;
+
+    function ensureAudioContext() {
+      if (!audioContext.current) {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+          audioContext.current = new AudioCtx();
+        }
+      }
+
+      if (audioContext.current && audioContext.current.state === "suspended") {
+        audioContext.current.resume().catch(() => {});
+      }
+
+      return audioContext.current;
+    }
+
+    function playTone({ frequency, duration, type = "triangle", gain = 0.04, sweepTo }) {
+      const ctx = ensureAudioContext();
+      if (!ctx) {
+        return;
+      }
+
+      const oscillator = ctx.createOscillator();
+      const volume = ctx.createGain();
+      const now = ctx.currentTime;
+
+      oscillator.type = type;
+      oscillator.frequency.setValueAtTime(frequency, now);
+      if (sweepTo) {
+        oscillator.frequency.exponentialRampToValueAtTime(sweepTo, now + duration);
+      }
+
+      volume.gain.setValueAtTime(0.0001, now);
+      volume.gain.exponentialRampToValueAtTime(gain, now + 0.01);
+      volume.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+      oscillator.connect(volume);
+      volume.connect(ctx.destination);
+      oscillator.start(now);
+      oscillator.stop(now + duration + 0.02);
+    }
+
+    function playClickSound() {
+      if (selectedDriver?.clickAudio) {
+        if (driverAudio.src !== new URL(selectedDriver.clickAudio, window.location.href).href) {
+          driverAudio.src = selectedDriver.clickAudio;
+        }
+
+        driverAudio.pause();
+        driverAudio.currentTime = 0;
+        driverAudio.play().catch(() => {});
+        return;
+      }
+
+      playTone({
+        frequency: boostActive ? 180 : 240,
+        sweepTo: boostActive ? 420 : 320,
+        duration: boostActive ? 0.14 : 0.08,
+        type: boostActive ? "sawtooth" : "triangle",
+        gain: boostActive ? 0.06 : 0.035
+      });
+    }
+
+    function playBoostSound() {
+      playTone({
+        frequency: 150,
+        sweepTo: 520,
+        duration: 0.32,
+        type: "sawtooth",
+        gain: 0.08
+      });
+    }
+
+    function updateScore() {
+      scoreEl.textContent = score.toLocaleString("en-US");
+      multiplierEl.textContent = boostActive ? "DRS Active x2" : "Normal Mode x1";
+    }
+
+    function resetGameState() {
+      score = 0;
+      charge = 0;
+      boostActive = false;
+      boostEndsAt = 0;
+      pressActive = false;
+      document.body.classList.remove("boosting");
+      document.body.classList.remove("shake");
+      driverWrap.classList.remove("active");
+      cancelAnimationFrame(animationFrame);
+      animationFrame = null;
+      driverAudio.pause();
+      driverAudio.currentTime = 0;
+    }
+
+    function setDefaultHint() {
+      if (!selectedDriver) {
+        hintEl.textContent = "드라이버를 먼저 선택하면 게임이 시작됩니다.";
+        return;
+      }
+
+      hintEl.textContent = `${selectedDriver.name}로 달리는 중입니다. 화면 아무 곳이나 클릭하면 점수가 올라갑니다.`;
+    }
+
+    function updateCharge() {
+      const percent = Math.min(charge, maxCharge);
+      meterFill.style.width = `${percent}%`;
+
+      if (boostActive) {
+        const remaining = Math.max(0, (boostEndsAt - performance.now()) / 1000);
+        boostTimer.textContent = `${remaining.toFixed(1)}s`;
+      } else {
+        boostTimer.textContent = `${Math.round(percent)}%`;
+      }
+
+      const ready = !boostActive && charge >= maxCharge;
+      boostBtn.disabled = !(boostMode === "manual" && ready);
+      boostBtn.textContent = boostActive ? "DRS Running" : ready ? "Activate DRS" : "Charge DRS";
+    }
+
+    function updateModeButtons() {
+      autoBtn.classList.toggle("active", boostMode === "auto");
+      manualBtn.classList.toggle("active", boostMode === "manual");
+      updateCharge();
+    }
+
+    function addShake() {
+      document.body.classList.remove("shake");
+      void document.body.offsetWidth;
+      document.body.classList.add("shake");
+    }
+
+    function pulseDriver(isDown) {
+      driverWrap.classList.toggle("active", isDown);
+      if (!selectedDriver) {
+        return;
+      }
+      driverImage.src = isDown ? selectedDriver.open : selectedDriver.close;
+    }
+
+    function maybeStartBoost() {
+      if (boostActive || charge < maxCharge) {
+        return;
+      }
+
+      if (boostMode === "auto") {
+        startBoost();
+      } else {
+        hintEl.textContent = `DRS 준비 완료. ${selectedDriver.name}로 3초 동안 x2 점수를 받으려면 Activate DRS를 누르세요.`;
+        updateCharge();
+      }
+    }
+
+    function startBoost() {
+      boostActive = true;
+      boostEndsAt = performance.now() + boostDuration;
+      document.body.classList.add("boosting");
+      hintEl.textContent = `DRS 활성화. ${selectedDriver.name}는 3초 동안 클릭당 2점입니다.`;
+      playBoostSound();
+      updateScore();
+      updateCharge();
+      tickBoost();
+    }
+
+    function stopBoost() {
+      boostActive = false;
+      charge = 0;
+      boostEndsAt = 0;
+      document.body.classList.remove("boosting");
+      setDefaultHint();
+      cancelAnimationFrame(animationFrame);
+      animationFrame = null;
+      updateScore();
+      updateCharge();
+    }
+
+    function tickBoost() {
+      updateCharge();
+      if (!boostActive) {
+        return;
+      }
+
+      if (performance.now() >= boostEndsAt) {
+        stopBoost();
+        return;
+      }
+
+      animationFrame = requestAnimationFrame(tickBoost);
+    }
+
+    function registerClick() {
+      score += boostActive ? 2 : 1;
+      if (!boostActive) {
+        charge = Math.min(maxCharge, charge + chargePerClick);
+      }
+      updateScore();
+      updateCharge();
+      addShake();
+      playClickSound();
+      maybeStartBoost();
+    }
+
+    function handlePressStart(event) {
+      if (!selectedDriver) {
+        return;
+      }
+
+      if (pressActive) {
+        return;
+      }
+
+      if (event.type === "keydown" && !["Enter", " "].includes(event.key)) {
+        return;
+      }
+
+      if (event.cancelable) {
+        event.preventDefault();
+      }
+
+      pressActive = true;
+      pulseDriver(true);
+      registerClick();
+    }
+
+    function handlePressEnd(event) {
+      if (!pressActive) {
+        return;
+      }
+
+      if (event.type === "keyup" && !["Enter", " "].includes(event.key)) {
+        return;
+      }
+
+      pressActive = false;
+      pulseDriver(false);
+    }
+
+    document.addEventListener("pointerdown", handlePressStart, { passive: false });
+    document.addEventListener("pointerup", handlePressEnd);
+    document.addEventListener("pointercancel", handlePressEnd);
+    document.addEventListener("mouseleave", handlePressEnd);
+    document.addEventListener("keydown", handlePressStart);
+    document.addEventListener("keyup", handlePressEnd);
+
+    boostBtn.addEventListener("click", () => {
+      if (!boostActive && charge >= maxCharge) {
+        startBoost();
+      }
+    });
+
+    autoBtn.addEventListener("click", () => {
+      boostMode = "auto";
+      hintEl.textContent = "자동 모드에서는 DRS 게이지가 가득 차는 즉시 발동됩니다.";
+      updateModeButtons();
+      maybeStartBoost();
+    });
+
+    manualBtn.addEventListener("click", () => {
+      boostMode = "manual";
+      hintEl.textContent = "수동 모드에서는 게이지가 가득 찬 뒤 Activate DRS 버튼으로 직접 발동합니다.";
+      updateModeButtons();
+    });
+
+    backBtn.addEventListener("click", () => {
+      showDriverSelector();
+    });
+
+    function selectDriver(key) {
+      resetGameState();
+      selectedDriver = drivers[key];
+      document.body.classList.remove("selecting");
+      selectorOverlay.classList.add("hidden");
+      driverTitle.textContent = selectedDriver.name;
+      driverImage.src = selectedDriver.close;
+      driverImage.alt = selectedDriver.name;
+      driverWrap.setAttribute("aria-label", `${selectedDriver.name}를 클릭해서 점수를 올리세요`);
+      if (selectedDriver.clickAudio) {
+        driverAudio.src = selectedDriver.clickAudio;
+      } else {
+        driverAudio.removeAttribute("src");
+        driverAudio.load();
+      }
+      pressActive = false;
+      driverWrap.classList.remove("active");
+      setDefaultHint();
+      updateScore();
+      updateCharge();
+    }
+
+    function showDriverSelector() {
+      resetGameState();
+      selectedDriver = null;
+      document.body.classList.add("selecting");
+      driverTitle.textContent = "Select Driver";
+      driverImage.src = "./max-close.png";
+      driverImage.alt = "Formula 1 driver";
+      driverWrap.setAttribute("aria-label", "클릭해서 점수를 올리세요");
+      selectorOverlay.classList.remove("hidden");
+      setDefaultHint();
+      updateScore();
+      updateCharge();
+    }
+
+    driverButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        selectDriver(button.dataset.driver);
+      });
+    });
+
+    updateScore();
+    updateModeButtons();
+    setDefaultHint();
+  </script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>F1 Clicker</title>
+  <style>
+    :root {
+      --bg-top: #f8fbff;
+      --bg-bottom: #dfe9f7;
+      --track: rgba(11, 21, 44, 0.12);
+      --fill-a: #ff3b30;
+      --fill-b: #ffb347;
+      --ink: #08111f;
+      --accent: #0f6dff;
+      --panel: rgba(255, 255, 255, 0.68);
+      --panel-border: rgba(255, 255, 255, 0.85);
+      --boost-top: #06142a;
+      --boost-bottom: #1f3d7b;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      overflow: hidden;
+      font-family: "Arial Black", Arial, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top, rgba(255, 255, 255, 0.95), transparent 38%),
+        linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+    }
+
+    body {
+      position: relative;
+    }
+
+    body.selecting {
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      inset: auto -20vw 10vh;
+      height: 28vh;
+      pointer-events: none;
+      opacity: 0.25;
+      background:
+        repeating-linear-gradient(
+          100deg,
+          transparent 0 2vw,
+          rgba(8, 17, 31, 0.12) 2vw 2.8vw,
+          transparent 2.8vw 5vw
+        );
+      transform: skewY(-8deg);
+      transition: opacity 180ms ease, transform 180ms ease;
+    }
+
+    body::after {
+      inset: 18vh -20vw auto;
+      transform: skewY(8deg);
+    }
+
+    body.boosting {
+      background:
+        radial-gradient(circle at top, rgba(120, 198, 255, 0.65), transparent 40%),
+        linear-gradient(180deg, var(--boost-top), var(--boost-bottom));
+      color: #f5fbff;
+    }
+
+    body.boosting::before,
+    body.boosting::after {
+      opacity: 0.7;
+      transform: skewY(-8deg) translateX(1vw);
+      animation: speed-lines 350ms linear infinite;
+    }
+
+    body.boosting::after {
+      transform: skewY(8deg) translateX(-1vw);
+      animation-direction: reverse;
+    }
+
+    body.shake {
+      animation: screen-shake 160ms linear;
+    }
+
+    .game {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      align-items: center;
+      justify-items: center;
+      gap: clamp(18px, 3vh, 30px);
+      padding: clamp(16px, 3vw, 30px);
+      position: relative;
+      z-index: 1;
+    }
+
+    .selector-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      background: rgba(5, 12, 24, 0.52);
+      backdrop-filter: blur(18px);
+    }
+
+    .selector-overlay.hidden {
+      display: none;
+    }
+
+    .selector-panel {
+      width: min(940px, 100%);
+      padding: clamp(22px, 4vw, 34px);
+      border-radius: 32px;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.92);
+      box-shadow: 0 30px 80px rgba(8, 17, 31, 0.2);
+    }
+
+    .selector-kicker {
+      margin: 0 0 8px;
+      font-size: 0.85rem;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+      opacity: 0.72;
+      text-align: center;
+    }
+
+    .selector-title {
+      margin: 0;
+      text-align: center;
+      font-size: clamp(1.8rem, 5vw, 3rem);
+      line-height: 1;
+      letter-spacing: 0.04em;
+    }
+
+    .selector-subtitle {
+      margin: 12px auto 0;
+      max-width: 38rem;
+      text-align: center;
+      font-size: 1rem;
+      line-height: 1.5;
+      opacity: 0.72;
+    }
+
+    .driver-grid {
+      margin-top: 24px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 18px;
+    }
+
+    .driver-card {
+      border: 0;
+      width: 100%;
+      padding: 18px;
+      border-radius: 28px;
+      cursor: pointer;
+      text-align: left;
+      color: inherit;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(240, 245, 252, 0.96));
+      box-shadow: 0 14px 34px rgba(8, 17, 31, 0.1);
+      transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease;
+    }
+
+    .driver-card:hover,
+    .driver-card:focus-visible {
+      transform: translateY(-4px);
+      box-shadow: 0 20px 42px rgba(8, 17, 31, 0.16);
+      outline: none;
+    }
+
+    .driver-card.max-card {
+      background:
+        linear-gradient(180deg, rgba(238, 244, 255, 0.98), rgba(227, 236, 249, 0.96));
+    }
+
+    .driver-card.charles-card {
+      background:
+        linear-gradient(180deg, rgba(255, 242, 242, 0.98), rgba(252, 231, 231, 0.96));
+    }
+
+    .driver-card.george-card {
+      background:
+        linear-gradient(180deg, rgba(237, 247, 255, 0.98), rgba(224, 240, 252, 0.96));
+    }
+
+    .driver-card.carlos-card {
+      background:
+        linear-gradient(180deg, rgba(255, 245, 236, 0.98), rgba(250, 232, 214, 0.96));
+    }
+
+    .driver-preview {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      object-fit: contain;
+      object-position: center top;
+      display: block;
+      margin-bottom: 10px;
+    }
+
+    .driver-name {
+      display: block;
+      font-size: clamp(1.2rem, 2vw, 1.5rem);
+      letter-spacing: 0.03em;
+    }
+
+    .driver-team {
+      display: block;
+      margin-top: 6px;
+      font-size: 0.92rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      opacity: 0.62;
+    }
+
+    .hud {
+      text-align: center;
+      display: grid;
+      gap: 10px;
+      justify-items: center;
+    }
+
+    .label {
+      font-size: clamp(0.8rem, 1.8vw, 1rem);
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      opacity: 0.72;
+    }
+
+    .driver-title {
+      margin: 0;
+      font-size: clamp(1rem, 2.2vw, 1.35rem);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .score {
+      margin: 0;
+      font-size: clamp(3.8rem, 10vw, 7rem);
+      line-height: 0.9;
+      letter-spacing: 0.04em;
+      text-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
+    }
+
+    .multiplier {
+      min-height: 1.2em;
+      font-size: clamp(0.95rem, 2vw, 1.15rem);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(8, 17, 31, 0.7);
+      transition: color 180ms ease;
+    }
+
+    body.boosting .multiplier {
+      color: rgba(245, 251, 255, 0.88);
+    }
+
+    .stage {
+      width: min(86vw, 620px);
+      display: grid;
+      justify-items: center;
+      position: relative;
+    }
+
+    .car-glow {
+      position: absolute;
+      width: 82%;
+      height: 82%;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle, rgba(255, 82, 82, 0.26) 0, rgba(255, 195, 0, 0.12) 40%, transparent 70%);
+      filter: blur(24px);
+      transform: translateY(8%);
+      opacity: 0.65;
+      transition: opacity 180ms ease, transform 180ms ease, background 180ms ease;
+      pointer-events: none;
+    }
+
+    body.boosting .car-glow {
+      background:
+        radial-gradient(circle, rgba(63, 180, 255, 0.4) 0, rgba(255, 255, 255, 0.18) 42%, transparent 72%);
+      opacity: 0.95;
+      transform: translateY(8%) scale(1.08);
+    }
+
+    .driver-wrap {
+      position: relative;
+      width: 100%;
+      max-width: 520px;
+      cursor: pointer;
+      transform-origin: center bottom;
+      transition: transform 70ms ease-out, filter 180ms ease;
+      filter: drop-shadow(0 18px 30px rgba(8, 17, 31, 0.14));
+    }
+
+    .driver-wrap.active {
+      transform: scale(1.045);
+    }
+
+    body.boosting .driver-wrap {
+      filter:
+        drop-shadow(0 0 16px rgba(125, 212, 255, 0.55))
+        drop-shadow(0 22px 36px rgba(0, 0, 0, 0.22));
+    }
+
+    .driver-image {
+      display: block;
+      width: 100%;
+      height: auto;
+      pointer-events: none;
+    }
+
+    .controls {
+      width: min(92vw, 640px);
+      display: grid;
+      gap: 14px;
+      justify-items: center;
+    }
+
+    .meter-card {
+      width: 100%;
+      padding: 16px 18px 18px;
+      border-radius: 24px;
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 10px 30px rgba(8, 17, 31, 0.08);
+      transition: background 180ms ease, border-color 180ms ease;
+    }
+
+    body.boosting .meter-card {
+      background: rgba(11, 25, 52, 0.48);
+      border-color: rgba(166, 220, 255, 0.28);
+    }
+
+    .meter-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+      font-size: 0.95rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .boost-timer {
+      min-width: 4ch;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .meter {
+      width: 100%;
+      height: 24px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: var(--track);
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.08);
+    }
+
+    .meter-fill {
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--fill-a), var(--fill-b));
+      box-shadow: 0 0 16px rgba(255, 101, 63, 0.4);
+      transition: width 70ms linear, filter 180ms ease;
+    }
+
+    body.boosting .meter-fill {
+      filter: saturate(1.4) brightness(1.2);
+    }
+
+    .control-row {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .mode-switch {
+      display: inline-flex;
+      padding: 4px;
+      border-radius: 999px;
+      background: rgba(8, 17, 31, 0.08);
+      gap: 4px;
+    }
+
+    .mode-btn,
+    .boost-btn {
+      border: 0;
+      cursor: pointer;
+      font: inherit;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .mode-btn {
+      padding: 10px 14px;
+      border-radius: 999px;
+      color: inherit;
+      background: transparent;
+      opacity: 0.65;
+      transition: background 140ms ease, opacity 140ms ease, transform 140ms ease;
+    }
+
+    .mode-btn.active {
+      background: rgba(255, 255, 255, 0.92);
+      opacity: 1;
+      transform: translateY(-1px);
+    }
+
+    .boost-btn {
+      padding: 12px 18px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #ff4f4f, #ffb649);
+      color: white;
+      box-shadow: 0 12px 24px rgba(255, 90, 70, 0.28);
+      transition: transform 100ms ease, opacity 140ms ease, box-shadow 140ms ease;
+    }
+
+    .boost-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .boost-btn:not(:disabled):active {
+      transform: scale(0.97);
+    }
+
+    .back-btn {
+      padding: 12px 18px;
+      border-radius: 999px;
+      background: rgba(8, 17, 31, 0.08);
+      color: inherit;
+      box-shadow: inset 0 0 0 1px rgba(8, 17, 31, 0.08);
+      transition: transform 100ms ease, background 140ms ease;
+    }
+
+    .back-btn:active {
+      transform: scale(0.97);
+    }
+
+    .hint {
+      margin: 0;
+      font-size: 0.95rem;
+      text-align: center;
+      opacity: 0.78;
+      line-height: 1.45;
+    }
+
+    body.boosting .hint {
+      opacity: 0.92;
+    }
+
+    @keyframes speed-lines {
+      from { background-position: 0 0; }
+      to { background-position: 16vw 0; }
+    }
+
+    @keyframes screen-shake {
+      0% { transform: translate(0, 0); }
+      20% { transform: translate(-5px, 2px); }
+      40% { transform: translate(4px, -3px); }
+      60% { transform: translate(-3px, 1px); }
+      80% { transform: translate(3px, 2px); }
+      100% { transform: translate(0, 0); }
+    }
+
+    @media (max-width: 640px) {
+      .selector-overlay {
+        align-items: flex-start;
+        justify-content: stretch;
+        padding: 16px;
+      }
+
+      .selector-panel {
+        width: 100%;
+        padding: 20px;
+        border-radius: 24px;
+        margin: 0;
       }
 
       .driver-grid {
