@@ -40,6 +40,11 @@
       position: relative;
     }
 
+    body.selecting {
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+
     body::before,
     body::after {
       content: "";
@@ -103,9 +108,12 @@
       position: fixed;
       inset: 0;
       z-index: 5;
-      display: grid;
-      place-items: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       padding: 24px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
       background: rgba(5, 12, 24, 0.52);
       backdrop-filter: blur(18px);
     }
@@ -500,7 +508,7 @@
     }
   </style>
 </head>
-<body>
+<body class="selecting">
   <div class="selector-overlay" id="selectorOverlay">
     <div class="selector-panel">
       <p class="selector-kicker">Driver Select</p>
@@ -897,6 +905,7 @@
     function selectDriver(key) {
       resetGameState();
       selectedDriver = drivers[key];
+      document.body.classList.remove("selecting");
       selectorOverlay.classList.add("hidden");
       driverTitle.textContent = selectedDriver.name;
       driverImage.src = selectedDriver.close;
@@ -918,6 +927,7 @@
     function showDriverSelector() {
       resetGameState();
       selectedDriver = null;
+      document.body.classList.add("selecting");
       driverTitle.textContent = "Select Driver";
       driverImage.src = "./max-close.png";
       driverImage.alt = "Formula 1 driver";
