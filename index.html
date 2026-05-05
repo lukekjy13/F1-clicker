@@ -205,6 +205,11 @@
         linear-gradient(180deg, rgba(255, 245, 236, 0.98), rgba(250, 232, 214, 0.96));
     }
 
+    .driver-card.lando-card {
+      background:
+        linear-gradient(180deg, rgba(255, 243, 232, 0.98), rgba(255, 228, 198, 0.96));
+    }
+
     .driver-preview {
       width: 100%;
       aspect-ratio: 1 / 1;
@@ -550,6 +555,11 @@
           <span class="driver-name">Carlos Sainz</span>
           <span class="driver-team">Williams Racing</span>
         </button>
+        <button class="driver-card lando-card" type="button" data-driver="lando">
+          <img class="driver-preview" src="./lando-close.png" alt="Lando Norris">
+          <span class="driver-name">Lando Norris</span>
+          <span class="driver-team">McLaren</span>
+        </button>
       </div>
     </div>
   </div>
@@ -604,7 +614,7 @@
         name: "Charles Leclerc",
         close: "./charles-close.png",
         open: "./charles-open.png",
-        hint: "샤를 르클레르로 출발합니다. 화면 아무 곳이나 클릭하면 점수가 올라갑니다.",
+        hint: "샤를 르끌레르로 출발합니다. 화면 아무 곳이나 클릭하면 점수가 올라갑니다.",
         clickAudio: "./0504-2.mp3"
       },
       george: {
@@ -619,6 +629,13 @@
         open: "./carlos-open.png",
         hint: "카를로스 사인츠로 출발합니다. 화면 아무 곳이나 클릭하면 점수가 올라갑니다.",
         clickAudio: "./0504-3.mp3"
+      },
+      lando: {
+        name: "Lando Norris",
+        close: "./lando-close.png",
+        open: "./lando-open.png",
+        hint: "랜도 노리스로 출발합니다. 화면 아무 곳이나 클릭하면 점수가 올라갑니다.",
+        clickAudio: "./0504-4.mp3"
       }
     };
 
